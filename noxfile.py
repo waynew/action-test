@@ -28,7 +28,7 @@ SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 
 COVERAGE_VERSION_REQUIREMENT = "coverage==5.2"
-SALT_REQUIREMENT = os.environ.get("SALT_REQUIREMENT") or "salt>=3002"
+SALT_REQUIREMENT = os.environ.get("SALT_REQUIREMENT") or "salt>=3003rc1"
 if SALT_REQUIREMENT == "salt==master":
     SALT_REQUIREMENT = "git+https://github.com/saltstack/salt.git@master"
 
@@ -81,7 +81,9 @@ def _install_requirements(
     install_test_requirements=True,
     install_source=False,
     install_salt=True,
+    install_extras=None,
 ):
+    install_extras = install_extras or []
     if SKIP_REQUIREMENTS_INSTALL is False:
         # Always have the wheel package installed
         session.install("--progress-bar=off", "wheel", silent=PIP_INSTALL_SILENT)
@@ -94,13 +96,7 @@ def _install_requirements(
             session.install("--progress-bar=off", SALT_REQUIREMENT, silent=PIP_INSTALL_SILENT)
 
         if install_test_requirements:
-            requirements_file = REPO_ROOT / "requirements" / _get_pydir(session) / "tests.txt"
-            install_command = [
-                "--progress-bar=off",
-                "-r",
-                str(requirements_file.relative_to(REPO_ROOT)),
-            ]
-            session.install(*install_command, silent=PIP_INSTALL_SILENT)
+            install_extras.append("tests")
 
         if EXTRA_REQUIREMENTS_INSTALL:
             session.log(
@@ -113,10 +109,12 @@ def _install_requirements(
             install_command += [req.strip() for req in EXTRA_REQUIREMENTS_INSTALL.split()]
             session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
-        if passed_requirements:
-            session.install(*passed_requirements)
         if install_source:
-            session.install("-e", ".", silent=PIP_INSTALL_SILENT)
+            pkg = "."
+            if install_extras:
+                pkg += f"[{','.join(install_extras)}]"
+
+            session.install("-e", pkg, silent=PIP_INSTALL_SILENT)
 
 
 @nox.session(python=PYTHON_VERSIONS)
@@ -194,7 +192,7 @@ def tests(session):
             "-o",
             str(COVERAGE_REPORT_PROJECT),
             "--omit=tests/*",
-            "--include=src/saltext/just_a_test/*",
+            "--include=src/saltext/vmware/*",
         )
         # Generate report for tests code coverage
         session.run(
@@ -202,18 +200,16 @@ def tests(session):
             "xml",
             "-o",
             str(COVERAGE_REPORT_TESTS),
-            "--omit=src/saltext/just_a_test/*",
+            "--omit=src/saltext/vmware/*",
             "--include=tests/*",
         )
         try:
-            session.run(
-                "coverage", "report", "--show-missing", "--include=src/saltext/just_a_test/*"
-            )
+            session.run("coverage", "report", "--show-missing", "--include=src/saltext/vmware/*")
             # If you also want to display the code coverage report on the CLI
             # for the tests, comment the call above and uncomment the line below
             # session.run(
             #    "coverage", "report", "--show-missing",
-            #    "--include=src/saltext/just_a_test/*,tests/*"
+            #    "--include=src/saltext/vmware/*,tests/*"
             # )
         finally:
             # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
@@ -386,14 +382,12 @@ def docs(session):
     """
     Build Docs
     """
-    requirements_file = REPO_ROOT / "requirements" / _get_pydir(session) / "docs.txt"
     _install_requirements(
         session,
-        "-r",
-        str(requirements_file.relative_to(REPO_ROOT)),
         install_coverage_requirements=False,
         install_test_requirements=False,
         install_source=True,
+        install_extras=["docs"],
     )
     os.chdir("docs/")
     session.run("make", "clean", external=True)
@@ -458,16 +452,20 @@ def gen_api_docs(session):
     """
     Generate API Docs
     """
-    requirements_file = REPO_ROOT / "requirements" / _get_pydir(session) / "docs.txt"
     _install_requirements(
         session,
-        "-r",
-        str(requirements_file.relative_to(REPO_ROOT)),
         install_coverage_requirements=False,
         install_test_requirements=False,
         install_source=True,
+        install_extras=["docs"],
     )
     shutil.rmtree("docs/ref")
     session.run(
-        "sphinx-apidoc", "--implicit-namespaces", "--module-first", "-o", "docs/ref/", "src/saltext"
+        "sphinx-apidoc",
+        "--implicit-namespaces",
+        "--module-first",
+        "-o",
+        "docs/ref/",
+        "src/saltext",
+        "src/saltext/vmware/config/schemas",
     )
