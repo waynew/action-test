@@ -1,6 +1,29 @@
-
-saltext.just_a_test.modules.blerp
-=================================
+﻿saltext.just\_a\_test.modules.blerp
+===================================
 
 .. automodule:: saltext.just_a_test.modules.blerp
-    :members:
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      do_something
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
