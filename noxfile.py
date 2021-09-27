@@ -154,6 +154,7 @@ def tests(session):
         "-ra",
         "-s",
         "--cov",
+        "src",
     ]
     if session._runner.global_config.forcecolor:
         args.append("--color=yes")
