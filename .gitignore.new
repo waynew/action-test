@@ -1,5 +1,3 @@
-# vim swap
-*.sw[a-p]
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -129,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-Saltfile
-local/
+
+# Ignore the setuptools_scm auto-generated version module
+src/saltext/just_a_test/version.py
+
+# Ignore CI generated artifacts
 artifacts/
